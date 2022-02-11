@@ -1,7 +1,7 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/roacn/diy
+rm -rf feeds/custom/{.github,diy,.gitignore,LICENSE,README.md}
 
 for ipk in $(find feeds/roacn/* -maxdepth 0 -type d);
 do
@@ -17,9 +17,8 @@ rm -Rf feeds/packages/multimedia/!(gstreamer1)
 rm -Rf feeds/packages/utils/!(pcsc-lite|xz)
 rm -Rf feeds/packages/net/!(mosquitto|curl)
 rm -Rf feeds/base/package/{kernel,firmware}
-rm -Rf feeds/base/package/network/!(services|utils)
+rm -Rf feeds/base/package/network/!(services)
 rm -Rf feeds/base/package/network/services/!(ppp)
-rm -Rf feeds/base/package/network/utils/!(iwinfo|iptables)
 rm -Rf feeds/base/package/utils/!(util-linux|lua)
 rm -Rf feeds/base/package/system/!(opkg|ubus|uci)
 
@@ -39,8 +38,6 @@ sed -i \
 	-e 's?../../lang?$(TOPDIR)/feeds/packages/lang?' \
 	-e 's,$(STAGING_DIR_HOST)/bin/upx,upx,' \
 	package/feeds/roacn/*/Makefile
-date=`date +%m.%d.%Y`
-sed -i -e "/\(# \)\?REVISION:=/c\REVISION:=$date" -e '/VERSION_CODE:=/c\VERSION_CODE:=$(REVISION)' include/version.mk
 
 cp -f devices/common/.config .config
 mv feeds/base feeds/base.bak
@@ -50,7 +47,6 @@ rm -Rf tmp
 mv feeds/base.bak feeds/base
 mv feeds/packages.bak feeds/packages
 sed -i 's/CONFIG_ALL=y/CONFIG_ALL=n/' .config
-sed -i '/PACKAGE_kmod-/d' .config
 
 sed -i "/mediaurlbase/d" package/feeds/*/luci-theme*/root/etc/uci-defaults/*
 
