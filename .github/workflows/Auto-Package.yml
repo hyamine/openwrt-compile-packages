@@ -153,7 +153,7 @@ jobs:
     - name: Apply patches
       run: |
         cd openwrt
-        find "devices/common/patches" -type f ! -path 'devices/common/patches/china_mirrors.patch' -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
+        find "devices/common/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
         if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
           find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
         fi
@@ -166,10 +166,10 @@ jobs:
       run: |
         cd openwrt
         make defconfig
-        mv -f package/feeds/custom custom.b
+        mv -f package/feeds/roacn roacn.b
         mv -f feeds/packages/lang feeds/packages/lang.b
         mv -f feeds/packages feeds/packages.b
-        mkdir package/feeds/custom
+        mkdir package/feeds/roacn
 
     - name: Compile the firmware
       run: |
@@ -179,19 +179,19 @@ jobs:
           fpkg="$(echo "$fpkg" | sed -e 's/ //g')"
           during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9]+' | sed -e 's/ //')"
           [ "$fpkg" ] && fpkg="^$(echo $fpkg)$"
-          for ipk in $(ls custom.b | grep -E "$fpkg"); do
+          for ipk in $(ls roacn.b | grep -E "$fpkg"); do
             echo $ipk
             function comp(){
-             cp -rf custom.b/$ipk package/feeds/custom/
+             cp -rf roacn.b/$ipk package/feeds/roacn/
              if [[ $ipk != luci-* ]]; then
               mv -f feeds/packages.b feeds/packages
-              [ "$(grep -E '(PKG_BUILD_DEPENDS|packages/lang|meson.mk)' package/feeds/custom/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
+              [ "$(grep -E '(PKG_BUILD_DEPENDS|packages/lang|meson.mk)' package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
              fi
              make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
              if [[ $ipk != luci-* ]]; then
               mv feeds/packages/lang feeds/packages/lang.b || true
               mv -f feeds/packages feeds/packages.b
-              rm -f package/feeds/custom/$ipk
+              rm -f package/feeds/roacn/$ipk
              fi
             }
             if [[ "$fpkg" && ! "$during" ]]; then
@@ -217,7 +217,7 @@ jobs:
       id: organize
       run: |
         mkdir packages
-        mv -f openwrt/bin/packages/*/custom/* packages || true
+        mv -f openwrt/bin/packages/*/roacn/* packages || true
         mv -f openwrt/.config packages/ || true
         # cp -Rf openwrt/bin/packages/*/packages/python3* packages/
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV

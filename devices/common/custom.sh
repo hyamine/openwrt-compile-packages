@@ -1,9 +1,9 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/custom/diy
+rm -rf feeds/roacn/diy
 
-for ipk in $(find feeds/custom/* -maxdepth 0 -type d);
+for ipk in $(find feeds/roacn/* -maxdepth 0 -type d);
 do
 	[[ "$(grep "KernelPackage" "$ipk/Makefile")" && ! "$(grep "BuildPackage" "$ipk/Makefile")" ]] && rm -rf $ipk || true
 done
@@ -24,10 +24,10 @@ rm -Rf feeds/base/package/utils/!(util-linux|lua)
 rm -Rf feeds/base/package/system/!(opkg|ubus|uci)
 
 ./scripts/feeds update -a
-./scripts/feeds install -a -p custom
+./scripts/feeds install -a -p roacn
 ./scripts/feeds install -a
-sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/custom/luci-*/luasrc/controller/* -name "*.lua"`
-sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/custom/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
+sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/roacn/luci-*/luasrc/controller/* -name "*.lua"`
+sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/roacn/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
 sed -i 's/Os/O2/g' include/target.mk
 #rm -rf ./feeds/packages/lang/golang
 #svn co https://github.com/immortalwrt/packages/trunk/lang/golang feeds/packages/lang/golang
@@ -38,7 +38,7 @@ sed -i \
 	-e 's/+python\( \|$\)/+python3/' \
 	-e 's?../../lang?$(TOPDIR)/feeds/packages/lang?' \
 	-e 's,$(STAGING_DIR_HOST)/bin/upx,upx,' \
-	package/feeds/custom/*/Makefile
+	package/feeds/roacn/*/Makefile
 date=`date +%m.%d.%Y`
 sed -i -e "/\(# \)\?REVISION:=/c\REVISION:=$date" -e '/VERSION_CODE:=/c\VERSION_CODE:=$(REVISION)' include/version.mk
 
