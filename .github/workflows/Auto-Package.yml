@@ -222,9 +222,8 @@ jobs:
     - name: Organize files
       id: organize
       run: |
-        cd openwrt
         mkdir packages
-        ls openwrt/bin/packages/*/roacn/*
+        #ls openwrt/bin/packages/*/roacn/*
         mv -f openwrt/bin/packages/*/roacn/* packages || true
         mv -f openwrt/.config packages/ || true
         #mv -f openwrt/bin/targets/*/*/packages/base-files* packages/ || true
