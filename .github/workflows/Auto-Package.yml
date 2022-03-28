@@ -194,8 +194,10 @@ jobs:
               rm -f package/feeds/roacn/$ipk 2>/dev/null && echo "rm -f package/feeds/roacn/$ipk"
             fi
           }
+          series=1
           for ipk in $(ls roacn.b | grep -E "$fpkg"); do
-            echo $ipk
+            echo "$series、$ipk"
+            let series+=1
             if [[ "$fpkg" && ! "$during" ]]; then
               echo "go comp!"
               comp
@@ -224,7 +226,8 @@ jobs:
       run: |
         mkdir packages
         #ls openwrt/bin/packages/*/roacn/*
-        mv -f openwrt/bin/packages/*/roacn/* packages || true
+        cp -f openwrt/bin/packages/${{ env.MTARGET }}/roacn/* packages/ && echo "move openwrt/bin/packages/*/roacn/* to packages" || true
+        mv -f openwrt/bin/packages/*/roacn/* packages/ || true
         mv -f openwrt/.config packages/ || true
         #mv -f openwrt/bin/targets/*/*/packages/base-files* packages/ || true
         #cp -Rf openwrt/bin/packages/*/packages/* packages/ || true
