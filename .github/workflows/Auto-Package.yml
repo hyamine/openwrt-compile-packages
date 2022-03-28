@@ -214,10 +214,11 @@ jobs:
       id: organize
       run: |
         mkdir packages
+        ls openwrt/bin/targets/*/*/packages
         mv -f openwrt/bin/packages/*/roacn/* packages || true
         mv -f openwrt/.config packages/ || true
         mv -f openwrt/bin/targets/*/*/packages/base-files* packages/ || true
-        # cp -Rf openwrt/bin/packages/*/packages/python3* packages/
+        #cp -Rf openwrt/bin/packages/*/packages/python3* packages/
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
         Emoji=("🎉" "🤞" "✨" "🎁" "🎈" "🎄" "🎨" "💋" "🍓" "🍕" "🍉" "💐" "🌴" "🚀" "🛸" "🗽" "⛅" "🌈" "🔥" "⛄" "🐶" "🏅" "🦄" "🐤")
         echo "EMOJI=${Emoji[$[$RANDOM % ${#Emoji[@]}]]}" >> $GITHUB_ENV
