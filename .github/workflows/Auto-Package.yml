@@ -225,12 +225,12 @@ jobs:
       id: organize
       run: |
         mkdir packages
-        #ls openwrt/bin/packages/*/roacn/*
-        cp -f openwrt/bin/packages/${{ env.MTARGET }}/roacn/* packages/ && echo "move openwrt/bin/packages/*/roacn/* to packages" || true
-        mv -f openwrt/bin/packages/*/roacn/* packages/ || true
-        mv -f openwrt/.config packages/ || true
-        #mv -f openwrt/bin/targets/*/*/packages/base-files* packages/ || true
-        #cp -Rf openwrt/bin/packages/*/packages/* packages/ || true
+        ls ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/* 2>/dev/null
+        cp -f ${GITHUB_WORKSPACE}/openwrt/bin/packages/${{ env.MTARGET }}/roacn/* packages/ && echo "move openwrt/bin/packages/*/roacn/* to packages" || true
+        mv -f ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/roacn/* packages/ || true
+        mv -f ${GITHUB_WORKSPACE}/openwrt/.config packages/ || true
+        #mv -f ${GITHUB_WORKSPACE}/openwrt/bin/targets/*/*/packages/base-files* packages/ || true
+        #cp -Rf ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/packages/* packages/ || true
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
         Emoji=("🎉" "🤞" "✨" "🎁" "🎈" "🎄" "🎨" "💋" "🍓" "🍕" "🍉" "💐" "🌴" "🚀" "🛸" "🗽" "⛅" "🌈" "🔥" "⛄" "🐶" "🏅" "🦄" "🐤")
         echo "EMOJI=${Emoji[$[$RANDOM % ${#Emoji[@]}]]}" >> $GITHUB_ENV
