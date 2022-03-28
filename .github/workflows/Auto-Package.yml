@@ -180,11 +180,11 @@ jobs:
             fi
             make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
             echo "files under feeds/packages/"
-            ls feeds/packages
+            ls feeds/packages 2>/dev/null
             #if [[ $ipk != luci-* ]]; then
-            mv feeds/packages/lang feeds/packages/lang.b && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
-            mv -f feeds/packages feeds/packages.b && echo "mv -f feeds/packages feeds/packages.b"
-            rm -f package/feeds/roacn/$ipk && echo "rm -f package/feeds/roacn/$ipk"
+            mv feeds/packages/lang feeds/packages/lang.b  2>/dev/null && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
+            mv -f feeds/packages feeds/packages.b  2>/dev/null && echo "mv -f feeds/packages feeds/packages.b"
+            rm -f package/feeds/roacn/$ipk  2>/dev/null && echo "rm -f package/feeds/roacn/$ipk"
             #fi
           }
           for ipk in $(ls roacn.b | grep -E "$fpkg"); do
