@@ -185,6 +185,8 @@ jobs:
           echo "during=${during}"
           [ "$fpkg" ] && fpkg="^$(echo $fpkg)$"
           echo "fpkg=${fpkg}"
+          echo "files under roacn.b: $(ls roacn.b)"
+          echo "$(ls roacn.b | grep -E "$fpkg")"
           for ipk in $(ls roacn.b | grep -E "$fpkg"); do
             echo $ipk
             function comp(){
