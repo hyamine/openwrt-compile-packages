@@ -70,7 +70,9 @@ jobs:
         echo "UPLOAD_FIRMWARE_TO_WETRANSFER=${UPLOAD_FIRMWARE_TO_WETRANSFER}" >> $GITHUB_ENV
         if [ ${{matrix.target}} == "xiaomi_mi-router-3-pro" ]; then
             echo "MTARGET=mipsel_24kc" >> $GITHUB_ENV
-        elif [ ${{matrix.target}} == "x86_64" ]; then
+        #elif [ ${{matrix.target}} == "x86_64" ]; then
+            #echo "MTARGET=x86_64" >> $GITHUB_ENV
+        else
             echo "MTARGET=x86_64" >> $GITHUB_ENV
         fi
 
