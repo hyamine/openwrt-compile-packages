@@ -185,14 +185,17 @@ jobs:
           echo "during=${during}"
           [ "$fpkg" ] && fpkg="^$(echo $fpkg)$"
           echo "fpkg=${fpkg}"
+          echo "------------------------"
           echo "files under roacn.b: $(ls roacn.b)"
-          echo "$(ls roacn.b | grep -E "$fpkg")"
+          echo "------------------------"
+          series=1
           for ipk in $(ls roacn.b | grep -E "$fpkg"); do
-            echo $ipk
+            echo "$series、$ipk"
+            let series+=1
             function comp(){
-              cp -rf roacn.b/$ipk package/feeds/roacn/
+              cp -rf roacn.b/$ipk package/feeds/roacn/ && echo "copy roacn.b/$ipk to package/feeds/roacn/"
               if [[ $ipk != luci-* ]]; then
-                mv -f feeds/packages.b feeds/packages
+                mv -f feeds/packages.b feeds/packages && echo "move feeds/packages.b to feeds/packages"
                 [ "$(grep -E '(PKG_BUILD_DEPENDS|packages/lang|meson.mk)' package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
               fi
               make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
@@ -209,17 +212,12 @@ jobs:
               gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date')
               if [ $gitdate != null ]; then
                 gitdate=$(date -d "$gitdate" +%s)
-                echo "gitdate=${gitdate}"
                 now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
-                echo "now=${now}"
                 [ "$during" ] || during="90000"
-                echo "gitdate+during=$(expr $gitdate + $during)"
                 if [[ $(expr $gitdate + $during) > $now ]]; then
                   echo "gitdate+during > now"
-                  echo "go comp!"
+                  echo "go comp!!"
                   comp
-                else
-                  echo "gitdate+during < now"
                 fi
               fi
             fi
