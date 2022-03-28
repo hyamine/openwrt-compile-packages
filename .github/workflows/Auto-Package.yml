@@ -179,12 +179,14 @@ jobs:
             [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
             fi
             make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
-            if [[ $ipk != luci-* ]]; then
-              mv feeds/packages/lang feeds/packages/lang.b && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
-              mv -f feeds/packages feeds/packages.b && echo "mv -f feeds/packages feeds/packages.b"
-              rm -f package/feeds/roacn/$ipk && echo "rm -f package/feeds/roacn/$ipk"
-            fi
-            }
+            echo "files under feeds/packages/"
+            ls feeds/packages
+            #if [[ $ipk != luci-* ]]; then
+            mv feeds/packages/lang feeds/packages/lang.b && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
+            mv -f feeds/packages feeds/packages.b && echo "mv -f feeds/packages feeds/packages.b"
+            rm -f package/feeds/roacn/$ipk && echo "rm -f package/feeds/roacn/$ipk"
+            #fi
+          }
           for ipk in $(ls roacn.b | grep -E "$fpkg"); do
             echo $ipk
             if [[ "$fpkg" && ! "$during" ]]; then
@@ -226,35 +228,13 @@ jobs:
         else
            echo "NAME=❌ ${{ env.date2 }} ${{ env.MTARGET }} ❌" >> $GITHUB_ENV
         fi
-
-    - name: Upload firmware to cowtransfer
-      if: env.UPLOAD_FIRMWARE_TO_COWTRANSFER == 'true'
-      continue-on-error: true
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        cowurl=$(./transfer cow --block 2621440 -s --no-progress ${FIRMWARE})
-        cowurl=$(echo $cowurl | grep -o -E "https[^ ]*")
-        echo "COWURL=$cowurl" >> $GITHUB_ENV
-        echo "Download Link: ${{ env.EMOJI }} $cowurl ${{ env.EMOJI }} 🚀"
- 
-    - name: Upload firmware to WeTransfer
-      if: env.UPLOAD_FIRMWARE_TO_WETRANSFER == 'true'
-      continue-on-error: true
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        wetrans=$(./transfer wet -s -p 16 --no-progress ${FIRMWARE})
-        wetrans=$(echo $wetrans | grep -o -E "https[^ ]*")
-        echo "WETRANS=$wetrans" >> $GITHUB_ENV
-        echo "Download Link: ${{ env.EMOJI }} $wetrans ${{ env.EMOJI }} 🚀"
-        
+      
     - name: Create release
       id: create_release
       if: env.REPO_TOKEN && env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true'
       continue-on-error: true
       run: |
         echo -e "定时更新插件，推送发布 🎈:\n" >> release.txt
-        [ ${{ env.WETRANS }} ] && echo -e "[WeTransfer] (${{ env.WETRANS }} 🗽)\n" >> release.txt
-        [ ${{ env.COWURL }} ] && echo -e "[奶牛上传] (${{ env.COWURL }} 🐮)\n" >> release.txt
         [ ${{ env.NOTICE }} ] && echo -e "${{ env.NOTICE }}" >> release.txt || true
 
     - name: Upload packages for release
