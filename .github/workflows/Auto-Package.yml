@@ -15,6 +15,12 @@ on:
   #     - master
   # schedule:
   #   - cron: 0 1 */1 * *
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: '[ssh-actions]改成[ssh],再按[Run workflow]按钮启动,则开启SSH连接配置固件'
+        required: false
+        default: 'ssh-actions'
 
 env:
   REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
@@ -179,11 +185,11 @@ jobs:
             [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
             fi
             make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
-            #if [[ $ipk != luci-* ]]; then
-            mv feeds/packages/lang feeds/packages/lang.b 2>/dev/null && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
-            mv -f feeds/packages feeds/packages.b 2>/dev/null && echo "mv -f feeds/packages feeds/packages.b"
-            rm -f package/feeds/roacn/$ipk 2>/dev/null && echo "rm -f package/feeds/roacn/$ipk"
-            #fi
+            if [[ $ipk != luci-* ]]; then
+              mv feeds/packages/lang feeds/packages/lang.b 2>/dev/null && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
+              mv -f feeds/packages feeds/packages.b 2>/dev/null && echo "mv -f feeds/packages feeds/packages.b"
+              rm -f package/feeds/roacn/$ipk 2>/dev/null && echo "rm -f package/feeds/roacn/$ipk"
+            fi
           }
           for ipk in $(ls roacn.b | grep -E "$fpkg"); do
             echo $ipk
@@ -213,12 +219,13 @@ jobs:
     - name: Organize files
       id: organize
       run: |
+        cd openwrt
         mkdir packages
-        ls openwrt/bin/targets/*/*/packages
+        ls openwrt/bin/packages/*/roacn/*
         mv -f openwrt/bin/packages/*/roacn/* packages || true
         mv -f openwrt/.config packages/ || true
         #mv -f openwrt/bin/targets/*/*/packages/base-files* packages/ || true
-        cp -Rf openwrt/bin/packages/*/packages/* packages/ || true
+        #cp -Rf openwrt/bin/packages/*/packages/* packages/ || true
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
         Emoji=("🎉" "🤞" "✨" "🎁" "🎈" "🎄" "🎨" "💋" "🍓" "🍕" "🍉" "💐" "🌴" "🚀" "🛸" "🗽" "⛅" "🌈" "🔥" "⛄" "🐶" "🏅" "🦄" "🐤")
         echo "EMOJI=${Emoji[$[$RANDOM % ${#Emoji[@]}]]}" >> $GITHUB_ENV
@@ -227,6 +234,13 @@ jobs:
         else
            echo "NAME=❌ ${{ env.date2 }} ${{ env.MTARGET }} ❌" >> $GITHUB_ENV
         fi
+
+    - name: SSH远程连接（制作.config配置文件）
+      if: env.SSH_ACTIONS == 'true' || (github.event.inputs.ssh == 'ssh')
+      uses: danshui-git/debugger-action@master
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       
     - name: Create release
       id: create_release
