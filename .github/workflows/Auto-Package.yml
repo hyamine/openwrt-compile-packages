@@ -131,36 +131,28 @@ jobs:
         chmod -R +x devices/* || true
         sed -i '/	refresh_config();/d' scripts/feeds
         ./scripts/feeds update -a
+        find "devices/common/patches" -type f -name '*.b.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         /bin/bash "devices/common/custom.sh" && echo "/bin/bash devices/common/custom.sh"
         if [ -f "devices/${{matrix.target}}/custom.sh" ]; then
           echo "/bin/bash devices/${{matrix.target}}/custom.sh"
           /bin/bash "devices/${{matrix.target}}/custom.sh"
         fi
         echo "patch devices/common/patches"
-        find "devices/common/patches" -type f ! -path 'devices/common/patches/china_mirrors.patch' -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
+        find "devices/common/patches" -type f -name '*.patch' ! -name '*.b.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
           echo "patch devices/${{matrix.target}}/patches"
           find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         fi
         cp -Rf ./diy/* ./ || true
         if [ -f "devices/${{matrix.target}}/default-settings" ]; then
-          echo >> package/*/*/my-default-settings/files/uci.defaults
-          cat devices/${{matrix.target}}/default-settings >> package/*/*/my-default-settings/files/uci.defaults
+          echo >> package/*/*/my-default-settings/files/etc/uci-defaults/99-default-settings
+          cat devices/${{matrix.target}}/default-settings >> package/*/*/my-default-settings/files/etc/uci-defaults/99-default-settings
         fi
         if [ -f "devices/${{matrix.target}}/.config" ]; then
           echo >> .config
           cat devices/${{matrix.target}}/.config >> .config
         fi
 
-
-    - name: Apply patches
-      run: |
-        cd openwrt
-        find "devices/common/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
-        if [ -n "$(ls -A "devices/${{matrix.target}}/patches" 2>/dev/null)" ]; then
-          find "devices/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch" || true
-        fi
-      
     - name: SSH connection to Actions
       uses: kiddin9/debugger-action@master
       if: contains(github.event.action, 'ssh')
@@ -178,33 +170,23 @@ jobs:
       run: |
         cd openwrt
           echo -e "$(($(nproc)+1)) thread compile"
-          fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(mipsel_24kc\|x86_64\| [0-9]\+\| ssh\| noser\| cw\)//g')"
-          fpkg="$(echo "$fpkg" | sed -e 's/ //g')"
-          echo "fpkg=${fpkg}"
-          during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9]+' | sed -e 's/ //')"
-          echo "during=${during}"
-          [ "$fpkg" ] && fpkg="^$(echo $fpkg)$"
-          echo "fpkg=${fpkg}"
-          echo "------------------------"
-          echo "files under roacn.b: $(ls roacn.b)"
-          echo "------------------------"
-          series=1
-          for ipk in $(ls roacn.b | grep -E "$fpkg"); do
-            echo "$series、$ipk"
-            let series+=1
-            function comp(){
-              cp -rf roacn.b/$ipk package/feeds/roacn/ && echo "copy roacn.b/$ipk to package/feeds/roacn/"
-              if [[ $ipk != luci-* ]]; then
-                mv -f feeds/packages.b feeds/packages && echo "move feeds/packages.b to feeds/packages"
-                [ "$(grep -E '(PKG_BUILD_DEPENDS|packages/lang|meson.mk)' package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
-              fi
-              make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
-              if [[ $ipk != luci-* ]]; then
-                mv feeds/packages/lang feeds/packages/lang.b && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
-                mv -f feeds/packages feeds/packages.b && echo "mv -f feeds/packages feeds/packages.b"
-                rm -f package/feeds/roacn/$ipk && echo "rm -f package/feeds/roacn/$ipk"
-              fi
+          fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(mipsel_24kc\|x86_64\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
+          during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
+          function comp(){
+            cp -rf roacn.b/$ipk package/feeds/roacn/ && echo "copy roacn.b/$ipk to package/feeds/roacn/"
+            if [[ $ipk != luci-* ]]; then
+              mv -f feeds/packages.b feeds/packages && echo "move feeds/packages.b to feeds/packages"
+            [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
+            fi
+            make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
+            if [[ $ipk != luci-* ]]; then
+              mv feeds/packages/lang feeds/packages/lang.b && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
+              mv -f feeds/packages feeds/packages.b && echo "mv -f feeds/packages feeds/packages.b"
+              rm -f package/feeds/roacn/$ipk && echo "rm -f package/feeds/roacn/$ipk"
+            fi
             }
+          for ipk in $(ls roacn.b | grep -E "$fpkg"); do
+            echo $ipk
             if [[ "$fpkg" && ! "$during" ]]; then
               echo "go comp!"
               comp
@@ -212,9 +194,10 @@ jobs:
               gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date')
               if [ $gitdate != null ]; then
                 gitdate=$(date -d "$gitdate" +%s)
-                now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
-                [ "$during" ] || during="90000"
-                if [[ $(expr $gitdate + $during) > $now ]]; then
+                now=$(date -d "$(date)" +%s)
+                [ "$during" ] || during="1.05"
+                durings=`echo "$during*60*60*24" | bc`
+                if [[ $(($gitdate + ${durings%.*})) -gt $now ]]; then
                   echo "gitdate+during > now"
                   echo "go comp!!"
                   comp
