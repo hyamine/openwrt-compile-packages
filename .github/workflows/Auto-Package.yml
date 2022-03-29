@@ -163,7 +163,7 @@ jobs:
 
     - name: SSH connection to Actions I
       uses: kiddin9/debugger-action@master
-      if: contains(github.event.action, ('ssh1'|'sshall'))
+      if: contains(github.event.action, 'ssh1')
 
     - name: Prepare
       run: |
@@ -246,7 +246,7 @@ jobs:
 
     - name: SSH connection to Actions II
       uses: kiddin9/debugger-action@master
-      if: contains(github.event.action, ('ssh2'|'sshall'))
+      if: contains(github.event.action, 'ssh2')
 
     - name: SSH connection to Actions
       if: env.SSH_ACTIONS == 'true' || (github.event.inputs.ssh == 'ssh')
