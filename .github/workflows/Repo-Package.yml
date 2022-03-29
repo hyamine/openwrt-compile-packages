@@ -48,42 +48,21 @@ jobs:
         
     - name: Trigger matrix Update
       run: |
-        if [[ ! "${{ github.event.inputs.packages }}" ]] || [[ "${{ github.event.inputs.packages }}" = "luci-app-" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+        gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/kiddin9/openwrt-packages/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+        fpkg="$(echo "${{github.event.inputs.packages}}" | sed -e 's/\(mipsel_24kc\|x86_64\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
+        during="$(echo "${{github.event.inputs.packages}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
+        [[ "$fpkg" && ! "$during" ]] || {
+          [ "$during" ] || during="1.05"
+          durings=`echo "$during*60*60*24" | bc`
           gitdate=$(date -d "$gitdate" +%s)
-          now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
-          if [[ $(expr $gitdate + 90000) < $now ]]; then
+          now=$(date -d "$(date)" +%s)
+          [ "$during" ] || during="1.05"
+          durings=`echo "$during*60*60*24" | bc`
+          if [[ $(expr $gitdate + ${durings%.*}) -lt $now ]]; then
             exit;
           fi
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "x86_64", "client_payload": {"target": "x86_64"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "mipsel_24kc", "client_payload": {"target": "xiaomi_mi-router-3-pro"}}'
-        elif [[ "${{ github.event.inputs.packages }}" = "x86_64" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
-          gitdate=$(date -d "$gitdate" +%s)
-          now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
-          if [[ $(expr $gitdate + 90000) < $now ]]; then
-            exit;
-          fi
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "x86_64", "client_payload": {"target": "x86_64"}}'
-        elif [[ "${{ github.event.inputs.packages }}" = "mipsel_24kc" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
-          gitdate=$(date -d "$gitdate" +%s)
-          now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
-          if [[ $(expr $gitdate + 90000) < $now ]]; then
-            exit;
-          fi
+        }
+        if [[ "${{ github.event.inputs.packages }}" = "mipsel_24kc" ]]; then
           curl \
           -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
@@ -94,27 +73,5 @@ jobs:
           -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
           -H "Accept: application/vnd.github.everest-preview+json" \
           -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "${{ github.event.inputs.packages }}", "client_payload": {"target": "x86_64"}}'
-          curl \
-          -X POST https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
-          -d '{"event_type": "${{ github.event.inputs.packages }}", "client_payload": {"target": "xiaomi_mi-router-3-pro"}}'
+          -d '{"event_type": "x86_64 ${{ github.event.inputs.packages }}", "client_payload": {"target": "x86_64"}}'
         fi
-  
-    - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
-      continue-on-error: true
-      with:
-        retain_days: 1
-        keep_minimum_runs: 0
-
-    - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@master
-      continue-on-error: true
-      if: env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 10
-        delete_tags: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}    

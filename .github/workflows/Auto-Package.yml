@@ -163,9 +163,9 @@ jobs:
           cat devices/${{matrix.target}}/.config >> .config
         fi
 
-    - name: SSH connection to Actions
+    - name: SSH connection to Actions I
       uses: kiddin9/debugger-action@master
-      if: contains(github.event.action, 'ssh')
+      if: contains(github.event.action, ('ssh1'|'sshall'))
 
     - name: Prepare
       run: |
@@ -246,7 +246,11 @@ jobs:
            echo "NAME=❌ ${{ env.date2 }} ${{ env.MTARGET }} ❌" >> $GITHUB_ENV
         fi
 
-    - name: SSH远程连接（制作.config配置文件）
+    - name: SSH connection to Actions II
+      uses: kiddin9/debugger-action@master
+      if: contains(github.event.action, ('ssh2'|'sshall'))
+
+    - name: SSH connection to Actions
       if: env.SSH_ACTIONS == 'true' || (github.event.inputs.ssh == 'ssh')
       uses: danshui-git/debugger-action@master
       env:
