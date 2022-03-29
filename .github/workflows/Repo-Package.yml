@@ -38,6 +38,9 @@ jobs:
         workflow_id: Auto-Package.yml,Repo-Package.yml
         access_token: ${{ github.token }}
 
+    - name: Checkout
+      uses: actions/checkout@main
+	  
     - name: Load Settings.ini
       run: |
         source "${GITHUB_WORKSPACE}/devices/common/settings.ini"
