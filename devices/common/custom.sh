@@ -1,7 +1,7 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/custom/{.github,diy,.gitignore,LICENSE,README.md}
+rm -rf feeds/roacn/{.github,diy,.gitignore,LICENSE,README.md}
 
 for ipk in $(find feeds/roacn/* -maxdepth 0 -type d);
 do
