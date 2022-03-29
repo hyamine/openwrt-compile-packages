@@ -1,7 +1,7 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/openwrt_packages/{.github,diy,.gitignore,LICENSE,README.md}
+rm -rf feeds/openwrt_packages/{.github,diy,.gitignore,LICENSE,README.md} 2>/dev/null
 
 for ipk in $(find feeds/openwrt_packages/* -maxdepth 0 -type d);
 do
