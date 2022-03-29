@@ -177,19 +177,23 @@ jobs:
     - name: Compile the firmware
       run: |
         cd ${GITHUB_WORKSPACE}/openwrt
+        echo "-------------------------------"
         echo "github.event.action=${{github.event.action}}"
         echo -e "$(($(nproc)+1)) thread compile"
         fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(mipsel_24kc\|x86_64\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
         echo "fpkg=${fpkg}"
         during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
         echo "during=${during}"
+        echo "files under openwrt_packages.b/"
+        ls openwrt_packages.b 2>/dev/null
+        echo "-------------------------------"
         function comp(){
           cp -rf openwrt_packages.b/$ipk package/feeds/openwrt_packages/ && echo "copy openwrt_packages.b/$ipk to package/feeds/openwrt_packages/"
           if [[ $ipk != luci-* ]]; then
             mv -f feeds/packages.b feeds/packages && echo "move feeds/packages.b to feeds/packages"
             [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/openwrt_packages/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
           fi
-          make package/feeds/openwrt_packages/$ipk/compile -j$(($(nproc)+1)) || make package/feeds/openwrt_packages/$ipk/compile V=s >>error_$ipk.log 2>&1
+          make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1
           if [[ $ipk != luci-* ]]; then
             mv feeds/packages/lang feeds/packages/lang.b 2>/dev/null && echo "move feeds/packages/lang feeds/packages/lang.b" || true
             mv -f feeds/packages feeds/packages.b 2>/dev/null && echo "move -f feeds/packages feeds/packages.b"
