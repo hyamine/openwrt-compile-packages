@@ -68,6 +68,7 @@ jobs:
         echo "UPLOAD_FIRMWARE_FOR_RELEASE=${UPLOAD_FIRMWARE_FOR_RELEASE}" >> $GITHUB_ENV
         echo "UPLOAD_FIRMWARE_TO_COWTRANSFER=${UPLOAD_FIRMWARE_TO_COWTRANSFER}" >> $GITHUB_ENV
         echo "UPLOAD_FIRMWARE_TO_WETRANSFER=${UPLOAD_FIRMWARE_TO_WETRANSFER}" >> $GITHUB_ENV
+        echo "PACKAGES_REPOS=${PACKAGES_REPOS}" >> $GITHUB_ENV
         if [ ${{matrix.target}} == "xiaomi_mi-router-3-pro" ]; then
             echo "MTARGET=mipsel_24kc" >> $GITHUB_ENV
         #elif [ ${{matrix.target}} == "x86_64" ]; then
@@ -78,11 +79,11 @@ jobs:
 
     - name: Trigger Packages Update
       run: |
-        gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/actions/runs" | jq -r '.workflow_runs[0].created_at')
+        gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/actions/runs" | jq -r '.workflow_runs[0].created_at')
         gitdate=$(date -d "$gitdate" +%s)
         now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
         if [[ $(expr $gitdate + 60) < $now ]]; then
-        curl -X POST https://api.github.com/repos/roacn/openwrt-packages/dispatches \
+        curl -X POST https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/dispatches \
         -H "Accept: application/vnd.github.everest-preview+json" \
         -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
         --data '{"event_type": "updated by compile-packages"}'
@@ -142,9 +143,9 @@ jobs:
         ./scripts/feeds update -a
         find "devices/common/patches" -type f -name '*.b.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
         /bin/bash "devices/common/custom.sh" && echo "/bin/bash devices/common/custom.sh"
-        if [ -f "devices/${{matrix.target}}/custom.sh" ]; then
-          echo "/bin/bash devices/${{matrix.target}}/custom.sh"
-          /bin/bash "devices/${{matrix.target}}/custom.sh"
+        if [ -f "devices/${{matrix.target}}/diy.sh" ]; then
+          echo "/bin/bash devices/${{matrix.target}}/diy.sh"
+          /bin/bash "devices/${{matrix.target}}/diy.sh"
         fi
         echo "patch devices/common/patches"
         find "devices/common/patches" -type f -name '*.patch' ! -name '*.b.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 -E --forward --no-backup-if-mismatch"
@@ -168,56 +169,58 @@ jobs:
 
     - name: Prepare
       run: |
-        cd openwrt
+        cd ${GITHUB_WORKSPACE}/openwrt
         make defconfig
-        mv -f package/feeds/roacn roacn.b
+        mv -f package/feeds/openwrt_packages openwrt_packages.b
         mv -f feeds/packages/lang feeds/packages/lang.b
         mv -f feeds/packages feeds/packages.b
-        mkdir package/feeds/roacn
+        mkdir package/feeds/openwrt_packages
+        cp -rf openwrt_packages.b/{wxbase,lib*,rapidjson,jpcre2,toml11,quickjspp,qtbase,qttools,rblibtorrent} package/feeds/openwrt_packages/ 2>/dev/null
 
     - name: Compile the firmware
       run: |
-        cd openwrt
-          echo "github.event.action=${{github.event.action}}"
-          echo -e "$(($(nproc)+1)) thread compile"
-          fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(mipsel_24kc\|x86_64\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
-          echo "fpkg=${fpkg}"
-          during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
-          function comp(){
-            cp -rf roacn.b/$ipk package/feeds/roacn/ && echo "copy roacn.b/$ipk to package/feeds/roacn/"
-            if [[ $ipk != luci-* ]]; then
-              mv -f feeds/packages.b feeds/packages && echo "move feeds/packages.b to feeds/packages"
-            [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/roacn/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
-            fi
-            make package/$ipk/compile -j$(($(nproc)+1)) || make package/$ipk/compile V=s >>error_$ipk.log 2>&1 || true
-            if [[ $ipk != luci-* ]]; then
-              mv feeds/packages/lang feeds/packages/lang.b 2>/dev/null && echo "mv feeds/packages/lang feeds/packages/lang.b" || true
-              mv -f feeds/packages feeds/packages.b 2>/dev/null && echo "mv -f feeds/packages feeds/packages.b"
-              rm -f package/feeds/roacn/$ipk 2>/dev/null && echo "rm -f package/feeds/roacn/$ipk"
-            fi
-          }
-          series=1
-          for ipk in $(ls roacn.b | grep -E "$fpkg"); do
-            echo "$series、$ipk"
-            let series+=1
-            if [[ "$fpkg" && ! "$during" ]]; then
-              echo "go comp!"
-              comp
-            else
-              gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date')
-              if [ $gitdate != null ]; then
-                gitdate=$(date -d "$gitdate" +%s)
-                now=$(date -d "$(date)" +%s)
-                [ "$during" ] || during="1.05"
-                durings=`echo "$during*60*60*24" | bc`
-                if [[ $(($gitdate + ${durings%.*})) -gt $now ]]; then
-                  echo "gitdate+during > now"
-                  echo "go comp!!"
-                  comp
-                fi
+        cd ${GITHUB_WORKSPACE}/openwrt
+        echo "github.event.action=${{github.event.action}}"
+        echo -e "$(($(nproc)+1)) thread compile"
+        fpkg="$(echo "${{github.event.action}}" | sed -e 's/\(mipsel_24kc\|x86_64\| [0-9][0-9.]*\| ssh\| noser\| cw\)//g' | sed -e 's/ //g')"
+        echo "fpkg=${fpkg}"
+        during="$(echo "${{github.event.action}}" | grep -o -E ' [0-9][0-9.]*' | sed -e 's/ //')"
+        echo "during=${during}"
+        function comp(){
+          cp -rf openwrt_packages.b/$ipk package/feeds/openwrt_packages/ && echo "copy openwrt_packages.b/$ipk to package/feeds/openwrt_packages/"
+          if [[ $ipk != luci-* ]]; then
+            mv -f feeds/packages.b feeds/packages && echo "move feeds/packages.b to feeds/packages"
+            [ "$(grep -E "(PKG_BUILD_DEPENDS|packages/lang|meson.mk)" package/feeds/openwrt_packages/$ipk/Makefile)" ] && mv feeds/packages/lang.b feeds/packages/lang
+          fi
+          make package/feeds/openwrt_packages/$ipk/compile -j$(($(nproc)+1)) || make package/feeds/openwrt_packages/$ipk/compile V=s >>error_$ipk.log 2>&1
+          if [[ $ipk != luci-* ]]; then
+            mv feeds/packages/lang feeds/packages/lang.b 2>/dev/null && echo "move feeds/packages/lang feeds/packages/lang.b" || true
+            mv -f feeds/packages feeds/packages.b 2>/dev/null && echo "move -f feeds/packages feeds/packages.b"
+            rm -f package/feeds/openwrt_packages/$ipk 2>/dev/null && echo "remove -f package/feeds/openwrt_packages/$ipk"
+          fi
+        }
+        series=1
+        for ipk in $(ls openwrt_packages.b | grep -E "$fpkg"); do
+          echo "$series、$ipk"
+          let series+=1
+          if [[ "$fpkg" && ! "$during" ]]; then
+            echo "go comp!"
+            comp
+          else
+            gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?path=$ipk&per_page=1" | jq -r '.[0].commit.committer.date')
+            if [ $gitdate != null ]; then
+              gitdate=$(date -d "$gitdate" +%s)
+              now=$(date -d "$(date)" +%s)
+              [ "$during" ] || during="1.05"
+              durings=`echo "$during*60*60*24" | bc`
+              if [[ $(($gitdate + ${durings%.*})) -gt $now ]]; then
+                echo "gitdate+during > now"
+                echo "go comp!!"
+                comp
               fi
             fi
-          done
+          fi
+        done
         echo "status=success" >> $GITHUB_ENV
 
     - name: Check space usage
@@ -227,11 +230,12 @@ jobs:
       id: organize
       run: |
         mkdir packages
+        echo "files under ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/*:"
         ls ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/* 2>/dev/null
-        cp -f ${GITHUB_WORKSPACE}/openwrt/bin/packages/${{ env.MTARGET }}/roacn/* packages/ && echo "move openwrt/bin/packages/*/roacn/* to packages" || true
-        mv -f ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/roacn/* packages/ || true
+        cp -f ${GITHUB_WORKSPACE}/openwrt/bin/packages/${{ env.MTARGET }}/openwrt_packages/* packages/ && echo "move openwrt/bin/packages/*/openwrt_packages/* to packages" || true
+        mv -f ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/openwrt_packages/* packages/ || true
         mv -f ${GITHUB_WORKSPACE}/openwrt/.config packages/ || true
-        #mv -f ${GITHUB_WORKSPACE}/openwrt/bin/targets/*/*/packages/base-files* packages/ || true
+        mv -f ${GITHUB_WORKSPACE}/openwrt/bin/targets/*/*/packages/base-files* packages/ || true
         #cp -Rf ${GITHUB_WORKSPACE}/openwrt/bin/packages/*/packages/* packages/ || true
         echo "FIRMWARE=$PWD/packages" >> $GITHUB_ENV
         Emoji=("🎉" "🤞" "✨" "🎁" "🎈" "🎄" "🎨" "💋" "🍓" "🍕" "🍉" "💐" "🌴" "🚀" "🛸" "🗽" "⛅" "🌈" "🔥" "⛄" "🐶" "🏅" "🦄" "🐤")
@@ -248,7 +252,7 @@ jobs:
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      
+        
     - name: Create release
       id: create_release
       if: env.REPO_TOKEN && env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true'

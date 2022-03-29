@@ -1,13 +1,14 @@
 #!/bin/bash
 
 shopt -s extglob
-rm -rf feeds/roacn/{.github,diy,.gitignore,LICENSE,README.md}
+rm -rf feeds/openwrt_packages/{.github,diy,.gitignore,LICENSE,README.md}
 
-for ipk in $(find feeds/roacn/* -maxdepth 0 -type d);
+for ipk in $(find feeds/openwrt_packages/* -maxdepth 0 -type d);
 do
 	[[ "$(grep "KernelPackage" "$ipk/Makefile")" && ! "$(grep "BuildPackage" "$ipk/Makefile")" ]] && rm -rf $ipk || true
 done
 
+rm -rf package/{base-files,network/config/firewall,network/services/dnsmasq,network/services/ppp,system/opkg,libs/mbedtls}
 rm -Rf feeds/luci/{applications,collections,protocols,themes,libs,docs,contrib}
 rm -Rf feeds/luci/modules/!(luci-base)
 # rm -rf feeds/packages/libs/!(libev|c-ares|cjson|boost|lib*|expat|tiff|freetype|udns|pcre2)
@@ -16,16 +17,17 @@ rm -Rf feeds/packages/multimedia/!(gstreamer1)
 rm -Rf feeds/packages/utils/!(pcsc-lite|xz)
 rm -Rf feeds/packages/net/!(mosquitto|curl)
 rm -Rf feeds/base/package/{kernel,firmware}
-rm -Rf feeds/base/package/network/!(services)
+rm -Rf feeds/base/package/network/!(services|utils)
 rm -Rf feeds/base/package/network/services/!(ppp)
+rm -Rf feeds/base/package/network/utils/!(iwinfo|iptables)
 rm -Rf feeds/base/package/utils/!(util-linux|lua)
 rm -Rf feeds/base/package/system/!(opkg|ubus|uci)
 
 ./scripts/feeds update -a
-./scripts/feeds install -a -p roacn
+./scripts/feeds install -a -p openwrt_packages
 ./scripts/feeds install -a
-sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/roacn/luci-*/luasrc/controller/* -name "*.lua"`
-sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/roacn/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
+sed -i 's/\(page\|e\)\?.acl_depends.*\?}//' `find package/feeds/openwrt_packages/luci-*/luasrc/controller/* -name "*.lua"`
+sed -i 's/\/cgi-bin\/\(luci\|cgi-\)/\/\1/g' `find package/feeds/openwrt_packages/luci-*/ -name "*.lua" -or -name "*.htm*" -or -name "*.js"` &
 sed -i 's/Os/O2/g' include/target.mk
 #rm -rf ./feeds/packages/lang/golang
 #svn co https://github.com/immortalwrt/packages/trunk/lang/golang feeds/packages/lang/golang
@@ -36,7 +38,7 @@ sed -i \
 	-e 's/+python\( \|$\)/+python3/' \
 	-e 's?../../lang?$(TOPDIR)/feeds/packages/lang?' \
 	-e 's,$(STAGING_DIR_HOST)/bin/upx,upx,' \
-	package/feeds/roacn/*/Makefile
+	package/feeds/openwrt_packages/*/Makefile
 
 cp -f devices/common/.config .config
 mv feeds/base feeds/base.bak
@@ -46,6 +48,7 @@ rm -Rf tmp
 mv feeds/base.bak feeds/base
 mv feeds/packages.bak feeds/packages
 sed -i 's/CONFIG_ALL=y/CONFIG_ALL=n/' .config
+sed -i '/PACKAGE_kmod-/d' .config
 
 sed -i "/mediaurlbase/d" package/feeds/*/luci-theme*/root/etc/uci-defaults/*
 

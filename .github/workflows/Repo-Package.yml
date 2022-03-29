@@ -38,10 +38,15 @@ jobs:
         workflow_id: Auto-Package.yml,Repo-Package.yml
         access_token: ${{ github.token }}
 
+    - name: Load Settings.ini
+      run: |
+        source "${GITHUB_WORKSPACE}/devices/common/settings.ini"
+        echo "PACKAGES_REPOS=${PACKAGES_REPOS}" >> $GITHUB_ENV
+        
     - name: Trigger matrix Update
       run: |
         if [[ ! "${{ github.event.inputs.packages }}" ]] || [[ "${{ github.event.inputs.packages }}" = "luci-app-" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
           gitdate=$(date -d "$gitdate" +%s)
           now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
           if [[ $(expr $gitdate + 90000) < $now ]]; then
@@ -58,7 +63,7 @@ jobs:
           -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
           -d '{"event_type": "mipsel_24kc", "client_payload": {"target": "xiaomi_mi-router-3-pro"}}'
         elif [[ "${{ github.event.inputs.packages }}" = "x86_64" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
           gitdate=$(date -d "$gitdate" +%s)
           now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
           if [[ $(expr $gitdate + 90000) < $now ]]; then
@@ -70,7 +75,7 @@ jobs:
           -H "Authorization: token ${{ secrets.REPO_TOKEN }}" \
           -d '{"event_type": "x86_64", "client_payload": {"target": "x86_64"}}'
         elif [[ "${{ github.event.inputs.packages }}" = "mipsel_24kc" ]]; then
-          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/roacn/openwrt-packages/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
+          gitdate=$(curl -H "Authorization: token ${{ secrets.REPO_TOKEN }}" -s "https://api.github.com/repos/${{ env.PACKAGES_REPOS }}/commits?&per_page=1" | jq -r '.[0].commit.committer.date')
           gitdate=$(date -d "$gitdate" +%s)
           now=$(date -d "$(date '+%Y-%m-%d %H:%M:%S')" +%s)
           if [[ $(expr $gitdate + 90000) < $now ]]; then
