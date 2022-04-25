@@ -39,6 +39,8 @@ sed -i \
 	-e 's?../../lang?$(TOPDIR)/feeds/packages/lang?' \
 	-e 's,$(STAGING_DIR_HOST)/bin/upx,upx,' \
 	package/feeds/openwrt_packages/*/Makefile
+date=`date +%m.%d`
+sed -i -e "/\(# \)\?REVISION:=/c\REVISION:=$date" -e '/VERSION_CODE:=/c\VERSION_CODE:=$(REVISION)' include/version.mk
 
 cp -f devices/common/.config .config
 mv feeds/base feeds/base.bak
