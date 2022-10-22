@@ -275,7 +275,7 @@ jobs:
         body_path: release.txt
 
     - name: Upload packages for artifact
-      uses: actions/upload-artifact@main
+      uses: actions/upload-artifact@v3
       continue-on-error: true
       if: env.UPLOAD_FIRMWARE_FOR_ARTIFACT == 'true'
       with:
@@ -301,7 +301,7 @@ jobs:
         keep_minimum_runs: 1
 
     - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@master
+      uses: roacn/delete-older-releases@master
       continue-on-error: true
       if: env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true' && !cancelled()
       with:
