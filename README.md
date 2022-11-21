@@ -36,9 +36,3 @@
 
 `Packages`运行→`luci-app-`改为`.*2`，则编译最近两天内有更新的软件包
 
-
-
-**编译mipsel_24kc系统插件**
-
-`Packages`运行→`luci-app-`改为`mipsel_24kc`，则只编译`mipsel_24kc`平台插件，适用于xiaomi_mi-router-3-pro等路由器
-
