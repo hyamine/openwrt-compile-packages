@@ -301,7 +301,7 @@ jobs:
         keep_minimum_runs: 1
 
     - name: Remove old Releases
-      uses: roacn/delete-older-releases@master
+      uses: hyamine/openwrt-compile-packages@master
       continue-on-error: true
       if: env.UPLOAD_FIRMWARE_FOR_RELEASE == 'true' && !cancelled()
       with:
